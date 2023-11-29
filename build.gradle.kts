@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.cts"
-version = "1.0-SNAPSHOT"
+version = "1.0-RELEASE"
 
 repositories {
     mavenCentral()

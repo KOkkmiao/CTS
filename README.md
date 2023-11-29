@@ -1,4 +1,4 @@
-# CTS
+# <img height="150" src="img/pluginIcon.png" width="200"/> 
     根据选中的内容快速查询properties的value
 
 ## 使用教程
@@ -23,5 +23,5 @@
   "parse-body":"xxx.xxx.xxxx" # 全量数据节点
 }
  ```
-查询图片
+# 查询图片
 <img src="img/gif-show.gif" height="200">
