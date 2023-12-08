@@ -14,7 +14,15 @@
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-    info see https://github.com/KOkkmiao/CTS
+    <p>
+        Support to fast show config value setting form many config center
+    </p>
+    <ul>
+        <li>Fast in project show config value</li>
+        <li>Convenient select key and  mouse right then show info</li>
+    </ul>
+    For more information visit the
+    <a href="https://github.com/KOkkmiao/CTS">project site</a>.
   ]]></description>
 
     <!-- Product and plugin compatibility requirements.
