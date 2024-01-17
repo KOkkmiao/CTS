@@ -1,6 +1,23 @@
 package com.cts.process;
 
+import com.alibaba.fastjson2.JSONObject;
+import com.cts.process.ui.BalloonPopupBuilder;
+import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.editor.RangeMarker;
+import com.intellij.openapi.editor.VisualPosition;
+import com.intellij.openapi.ui.popup.Balloon;
+import com.intellij.openapi.util.Disposer;
+import com.intellij.openapi.util.TextRange;
+import com.intellij.ui.awt.RelativePoint;
+import com.intellij.ui.components.JBComboBoxLabel;
+import com.intellij.ui.components.JBPanel;
+import com.intellij.ui.components.JBScrollPane;
+import com.intellij.ui.components.JBTextArea;
+import com.intellij.ui.components.JBTextField;
+import com.intellij.util.ui.JBUI;
+import com.intellij.util.ui.PositionTracker;
+import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,43 +31,108 @@ import java.util.Properties;
 public class PropertiesShow {
     private CommonShow parentShow;
     private Font song = new Font("宋体", Font.BOLD, 14);
+    private Font songError = new Font("宋体", Font.BOLD, 15);
     private Color index = new Color(204, 120, 50);
     private Color textColor = new Color(255, 198, 109);
     public PropertiesShow() {
         parentShow = CommonShow.DEFAULT_COMMON;
     }
-    public void show(Map<String, Properties> values,String selectText, Editor editor){
-        JPanel jPanel = new JPanel();
-        values.forEach((key,value)->{
-            String property = value.getProperty(selectText);
+    public void show(Map<String, Properties> values, String selectText, Editor editor) {
+        FlowLayout flowLayout = new FlowLayout();
+        JPanel content = new JPanel(flowLayout);
+        AppSettingsState instance = AppSettingsState.getInstance();
+        int appMappings = JSONObject.parseObject(instance.fetchText).getIntValue("bigWidth", 50);
+        boolean empty = true;
+        for (Map.Entry<String, Properties> entry : values.entrySet()) {
+            String property = entry.getValue().getProperty(selectText);
             if (property != null) {
-                JLabel jTextPane = new JLabel();
-                jTextPane.setText(key);
-                jTextPane.setForeground(index);
-                jTextPane.setFont(song);
-                jPanel.add(jTextPane);
-                if (property.length()>350) {
-                    StringBuilder stringBuilder = new StringBuilder();
-                    for (int i = 0; ; ) {
-                        int j = i + 200;
-                        if (j>property.length()) {
-                            stringBuilder.append(property.substring(i,property.length()));
-                            break;
-                        }
-                        stringBuilder.append(property.substring(i,j));
-                        stringBuilder.append("\n");
-                        i += 200;
-                    }
-                    property = stringBuilder.toString();
-                }
-                JTextPane text = new JTextPane();
-                text.setForeground(textColor);
-                text.setFont(song);
-                text.setBorder(null);
-                text.setText(" "+property);
-                jPanel.add(text);
+                content.add(concatKeyValue(entry.getKey(),property,appMappings));
+                empty = false;
             }
-        });
-        parentShow.show(new JScrollPane(jPanel), editor);
+        }
+        if (empty) {
+            JLabel jTextPane = new JLabel();
+            jTextPane.setText("select key is empty");
+            jTextPane.setForeground(textColor);
+            jTextPane.setFont(songError);
+            content.add(jTextPane);
+        }
+        Balloon balloon = new BalloonPopupBuilder(content)
+                .setDialogMode(true)
+                .setFillColor(JBUI.CurrentTheme.CustomFrameDecorations.paneBackground())
+                .setBorderColor(Color.darkGray)
+                .setShadow(true)
+                .setAnimationCycle(200)
+                .setHideOnClickOutside(true)
+                .setHideOnAction(true)
+                .setHideOnFrameResize(true)
+                .setHideOnCloseClick(true)
+                .setHideOnKeyOutside(true)
+                .setBlockClicksThroughBalloon(true)
+                .setCloseButtonEnabled(false)
+                .createBalloon();
+        RangeMarker rangeMarker =
+                editor.getDocument().createRangeMarker(new TextRange(editor.getSelectionModel().getSelectionStart(),
+                        editor.getSelectionModel().getSelectionEnd()));
+        balloon.show(new Point(editor, rangeMarker), Balloon.Position.below);
+    }
+    public JPanel concatKeyValue(String keyText, String valueText, int bigWith) {
+        BorderLayout borderLayout = new BorderLayout();
+        JPanel container = new JPanel(borderLayout);
+
+        JLabel key = new JLabel();
+        key.setForeground(index);
+        key.setFont(song);
+        key.setText(keyText + ":");
+
+        JTextArea value = new JTextArea();
+        value.setFont(song);
+        value.setForeground(textColor);
+        value.setAutoscrolls(true);
+        value.setText(valueText);
+        value.setOpaque(false);
+        value.setLineWrap(true);
+        value.setEditable(false);
+
+        value.setBorder(BorderFactory.createEmptyBorder());
+
+        container.add(key, BorderLayout.WEST);
+        if (valueText.length() > 350) {
+            int height = (valueText.length() / bigWith) * 14;
+            value.setPreferredSize(new Dimension(bigWith * 10, height));
+            JBScrollPane jScrollBar = new JBScrollPane(value);
+            jScrollBar.setPreferredSize(new Dimension(bigWith * 10, 200));
+            container.add(jScrollBar, BorderLayout.CENTER);
+        } else {
+            container.add(value, BorderLayout.CENTER);
+        }
+        return container;
+    }
+    public static class Point extends PositionTracker<Balloon> {
+        private Editor editor;
+        private RangeMarker rangeMarker;
+        public Point(Editor editor, RangeMarker rangeMarker) {
+            super(editor.getContentComponent());
+            this.editor = editor;
+            this.rangeMarker = rangeMarker;
+
+        }
+        @Override
+        public RelativePoint recalculateLocation(@NotNull Balloon object) {
+            VisualPosition startPosition = editor.offsetToVisualPosition(rangeMarker.getStartOffset(), true, false);
+            VisualPosition endPosition = editor.offsetToVisualPosition(rangeMarker.getEndOffset(), false, false);
+            java.awt.Point startPoint = editor.visualPositionToXY(startPosition);
+            java.awt.Point endPoint = editor.visualPositionToXY(endPosition);
+
+            int lineHeight = editor.getLineHeight();
+            int centerX = (int) ((startPoint.x + endPoint.x) * 0.5f);
+            int x = Math.min(centerX, endPoint.x);
+            int y = endPoint.y + lineHeight;
+            Rectangle visibleArea = editor.getScrollingModel().getVisibleArea();
+            // java.awt.Point point = new  java.awt.Point(visibleArea.x + visibleArea.width / 3, visibleArea.y +
+            // visibleArea.height / 2);
+            java.awt.Point point = new java.awt.Point(x, y);
+            return new RelativePoint(getComponent(), point);
+        }
     }
 }

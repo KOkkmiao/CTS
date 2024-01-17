@@ -24,4 +24,16 @@
 }
  ```
 # 查询图片
-<img src="img/gif-show.gif" height="200">
+<img src="img/git-show.gif" height="200">
+
+# 版本
+v1.0 :
+
+<img src="img/git-show.gif" height="200">
+
+ v1.1 :
+  - 更换页面ui展示组件
+  - 添加可配置长数据的宽度
+  - 提供空噢诶之数据提示信息
+
+<img src="img/git-show.gif" height="200">

@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.cts"
-version = "1.0-RELEASE"
+version = "1.1-RELEASE"
 
 repositories {
     mavenCentral()
@@ -30,7 +30,7 @@ tasks {
 
     patchPluginXml {
         sinceBuild.set("193")
-        untilBuild.set("223.*")
+        untilBuild.set("232.*")
     }
 
     signPlugin {
