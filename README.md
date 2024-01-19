@@ -29,7 +29,7 @@
 # 版本
 v1.0 :
 
-<img src="img/git-show.gif" height="200">
+<img src="img/gif-show.gif" height="200">
 
  v1.1 :
   - 更换页面ui展示组件
