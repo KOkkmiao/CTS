@@ -17,6 +17,7 @@ import com.intellij.ui.components.JBTextArea;
 import com.intellij.ui.components.JBTextField;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.PositionTracker;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -33,22 +34,26 @@ public class PropertiesShow {
     private Font song = new Font("宋体", Font.BOLD, 14);
     private Font songError = new Font("宋体", Font.BOLD, 15);
     private Color index = new Color(204, 120, 50);
+    private Color white = new Color(255, 255, 255, 237);
     private Color textColor = new Color(255, 198, 109);
     public PropertiesShow() {
         parentShow = CommonShow.DEFAULT_COMMON;
     }
-    public void show(Map<String, Properties> values, String selectText, Editor editor) {
+    public void show(Map<String, Properties> values, String grayName, String selectText,
+            Editor editor) {
         FlowLayout flowLayout = new FlowLayout();
         JPanel content = new JPanel(flowLayout);
         AppSettingsState instance = AppSettingsState.getInstance();
         int appMappings = JSONObject.parseObject(instance.fetchText).getIntValue("bigWidth", 50);
         boolean empty = true;
+        String grayScope = StringUtils.isNoneBlank(grayName) ? grayName.substring(selectText.length()) : grayName;
         for (Map.Entry<String, Properties> entry : values.entrySet()) {
-            String property = entry.getValue().getProperty(selectText);
-            if (property != null) {
-                content.add(concatKeyValue(entry.getKey(),property,appMappings));
-                empty = false;
+            String property = entry.getValue().getProperty(selectText,entry.getValue().getProperty(grayName));
+            if (property == null) {
+                continue;
             }
+            content.add(concatKeyValue(entry.getKey(), selectText, grayScope, property, appMappings));
+            empty = false;
         }
         if (empty) {
             JLabel jTextPane = new JLabel();
@@ -76,14 +81,14 @@ public class PropertiesShow {
                         editor.getSelectionModel().getSelectionEnd()));
         balloon.show(new Point(editor, rangeMarker), Balloon.Position.below);
     }
-    public JPanel concatKeyValue(String keyText, String valueText, int bigWith) {
+    public JPanel concatKeyValue(String keyText, String selectText, String Scope, String valueText, int bigWith) {
         BorderLayout borderLayout = new BorderLayout();
         JPanel container = new JPanel(borderLayout);
 
         JLabel key = new JLabel();
         key.setForeground(index);
         key.setFont(song);
-        key.setText(keyText + ":");
+        key.setText(keyText + Scope + ":");
 
         JTextArea value = new JTextArea();
         value.setFont(song);
@@ -93,8 +98,6 @@ public class PropertiesShow {
         value.setOpaque(false);
         value.setLineWrap(true);
         value.setEditable(false);
-
-        value.setBorder(BorderFactory.createEmptyBorder());
 
         container.add(key, BorderLayout.WEST);
         if (valueText.length() > 350) {
