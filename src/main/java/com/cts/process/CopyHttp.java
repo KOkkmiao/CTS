@@ -1,6 +1,7 @@
 package com.cts.process;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.google.common.collect.Sets;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.diagnostic.Logger;
@@ -9,6 +10,7 @@ import com.intellij.openapi.editor.SelectionModel;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.util.text.StringUtil;
+import org.apache.commons.collections.SetUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -23,9 +25,7 @@ import org.apache.http.util.EntityUtils;
 
 import java.io.IOException;
 import java.io.StringReader;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 public class CopyHttp extends AnAction {
     private static final Logger LOG = Logger.getInstance(CopyHttp.class);
     private static Map<String, Properties> values = new HashMap<>();
+    private static Map<String, String> grayValuesMapping = new HashMap<>();
     CloseableHttpClient build = HttpClientBuilder.create().build();
     private long systemTime;
     private PropertiesShow propertiesShow = new PropertiesShow();
@@ -48,15 +49,35 @@ public class CopyHttp extends AnAction {
             return;
         }
         if ((System.currentTimeMillis()/1000L - systemTime) > 120L) {
-            AppSettingsState instance = AppSettingsState.getInstance();
-            JSONObject appMappings = JSONObject.parseObject(instance.fetchText).getJSONObject("urls");
+            JSONObject jsonObject = JSONObject.parseObject(AppSettingsState.getInstance().fetchText);
+            JSONObject appMappings = jsonObject.getJSONObject("urls");
+            String splitValue = jsonObject.getString("split_value");
             values.clear();
+            grayValuesMapping.clear();
             appMappings.forEach((key,value)->{
-                values.put(key,getHttp((String) value));
+                Properties http = getHttp((String) value);
+                splitGrayProperties(http, splitValue);
+                values.put(key,http);
             });
             systemTime = System.currentTimeMillis() / 1000L;
         }
-        propertiesShow.show(values, selectText, selectedTextEditor);
+        propertiesShow.show(values, grayValuesMapping.getOrDefault(selectText, ""), selectText, selectedTextEditor);
+    }
+    private void splitGrayProperties(Properties http, String splitValue){
+        if (splitValue == null || splitValue.length() == 0) {
+            return;
+        }
+        String[] splitValues = splitValue.split(",");
+        Set<String> keys = http.stringPropertyNames();
+        for (String key : keys) {
+            for (String value : splitValues) {
+                if (!key.contains(value)) {
+                    continue;
+                }
+                String grayKey = key.substring(0, key.indexOf(value));
+                grayValuesMapping.put(grayKey, key);
+            }
+        }
     }
     private Properties getHttp(String url){
         AppSettingsState instance = AppSettingsState.getInstance();
