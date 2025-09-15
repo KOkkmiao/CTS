@@ -9,6 +9,7 @@ import com.intellij.openapi.editor.VisualPosition;
 import com.intellij.openapi.ui.popup.Balloon;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.TextRange;
+import com.intellij.ui.JBColor;
 import com.intellij.ui.awt.RelativePoint;
 import com.intellij.ui.components.JBComboBoxLabel;
 import com.intellij.ui.components.JBPanel;
@@ -17,12 +18,18 @@ import com.intellij.ui.components.JBTextArea;
 import com.intellij.ui.components.JBTextField;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.PositionTracker;
+import com.intellij.util.ui.UIUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+import javax.swing.text.PlainDocument;
 import java.awt.*;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 
 /**
@@ -42,25 +49,54 @@ public class PropertiesShow {
     public void show(Map<String, Properties> values, String grayName, String selectText,
             Editor editor) {
         FlowLayout flowLayout = new FlowLayout();
+        flowLayout.setAlignment(FlowLayout.LEFT);
         JPanel content = new JPanel(flowLayout);
         AppSettingsState instance = AppSettingsState.getInstance();
         int appMappings = JSONObject.parseObject(instance.fetchText).getIntValue("bigWidth", 50);
         boolean empty = true;
         String grayScope = StringUtils.isNoneBlank(grayName) ? grayName.substring(selectText.length()) : grayName;
+        int count = 0;
+        LinkedList<JPanel> sort = new LinkedList<>();
         for (Map.Entry<String, Properties> entry : values.entrySet()) {
-            String property = entry.getValue().getProperty(selectText,entry.getValue().getProperty(grayName));
+            String property = entry.getValue().getProperty(selectText);
+            boolean gray = false;
             if (property == null) {
-                continue;
+                property = entry.getValue().getProperty(grayName);
+                if (property == null) {
+                    continue;
+                }
+                gray = true;
             }
-            content.add(concatKeyValue(entry.getKey(), selectText, grayScope, property, appMappings));
+            JPanel jPanel = concatKeyValue(entry.getKey(), selectText, gray ? grayScope : "", property, appMappings);
+            if (entry.getKey().contains("-pro")) {
+                sort.addFirst(jPanel);
+            }else{
+                sort.addLast(jPanel);
+            }
+            count++;
             empty = false;
         }
+
         if (empty) {
             JLabel jTextPane = new JLabel();
             jTextPane.setText("select key is empty");
             jTextPane.setForeground(textColor);
             jTextPane.setFont(songError);
             content.add(jTextPane);
+        }else {
+            for (JPanel jPanel : sort) {
+                content.add(jPanel);
+            }
+        }
+        int row = count / 2 + (count % 2 > 0 ? 1 : 0);
+
+        GridLayout gridLayout = new GridLayout(row, 2, 10, 10);
+        content.setLayout(gridLayout);
+        JBScrollPane jbScrollPane = new JBScrollPane(content);
+        JRootPane root = Objects.requireNonNull(UIUtil.getRootPane(editor.getContentComponent()));
+        root.getLayeredPane().add(jbScrollPane);
+        if (!new Rectangle(root.getSize()).contains(new Rectangle(content.getPreferredSize()))) {
+            gridLayout.setRows(row - 1);
         }
         Balloon balloon = new BalloonPopupBuilder(content)
                 .setDialogMode(true)
@@ -80,16 +116,17 @@ public class PropertiesShow {
                 editor.getDocument().createRangeMarker(new TextRange(editor.getSelectionModel().getSelectionStart(),
                         editor.getSelectionModel().getSelectionEnd()));
         balloon.show(new Point(editor, rangeMarker), Balloon.Position.below);
+
     }
     public JPanel concatKeyValue(String keyText, String selectText, String Scope, String valueText, int bigWith) {
         BorderLayout borderLayout = new BorderLayout();
         JPanel container = new JPanel(borderLayout);
 
+        // container.setBorder(BorderFactory.createEmptyBorder(10,0,10,0));
         JLabel key = new JLabel();
         key.setForeground(index);
         key.setFont(song);
-        key.setText(keyText + Scope + ":");
-
+        key.setText(keyText + Scope);
         JTextArea value = new JTextArea();
         value.setFont(song);
         value.setForeground(textColor);
@@ -97,17 +134,22 @@ public class PropertiesShow {
         value.setText(valueText);
         value.setOpaque(false);
         value.setLineWrap(true);
-        value.setEditable(false);
+        value.setEditable(true);
+        // value.setWrapStyleWord(true);
+        container.add(key, BorderLayout.NORTH);
 
-        container.add(key, BorderLayout.WEST);
+
         if (valueText.length() > 350) {
-            int height = (valueText.length() / bigWith) * 14;
-            value.setPreferredSize(new Dimension(bigWith * 10, height));
             JBScrollPane jScrollBar = new JBScrollPane(value);
-            jScrollBar.setPreferredSize(new Dimension(bigWith * 10, 200));
-            container.add(jScrollBar, BorderLayout.CENTER);
+            // jScrollBar.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
+            jScrollBar.setPreferredSize(new Dimension(bigWith * 10, 50));
+            container.add(jScrollBar, BorderLayout.SOUTH);
         } else {
-            container.add(value, BorderLayout.CENTER);
+            JBScrollPane jScrollBar = new JBScrollPane(value);
+            // jScrollBar.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
+            // jScrollBar.setPreferredSize(new Dimension(bigWith * 10, 0));
+            container.add(jScrollBar, BorderLayout.SOUTH);
+            // container.add(value, BorderLayout.SOUTH);
         }
         return container;
     }
