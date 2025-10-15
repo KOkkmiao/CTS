@@ -42,10 +42,16 @@
                                  id="com.cts.process.AppSettingsConfigurable"
                                  displayName="CTS Setting"/>
         <applicationService serviceImplementation="com.cts.process.AppSettingsState"/>
+        <lang.foldingBuilder
+                language="JAVA"
+                implementationClass="com.cts.process.SimpleFoldingBuilder"/>
     </extensions>
     <actions>
         <action id="Copy-Http" class="com.cts.process.CopyHttp" text="CTS" popup="true" description="执行http">
             <add-to-group group-id="EditorPopupMenu"  anchor="first"/>
+        </action>
+        <action id="UnicodeAction" class="com.cts.process.UnicodeAction" text="UnicodeAction">
+            <keyboard-shortcut keymap="$default" first-keystroke="alt E"/>
         </action>
     </actions>
 </idea-plugin>
