@@ -45,6 +45,8 @@
         <lang.foldingBuilder
                 language="JAVA"
                 implementationClass="com.cts.process.SimpleFoldingBuilder"/>
+        <toolWindow factoryClass="com.cts.process.CtsToolWindows" id="ctsWindow"/>
+
     </extensions>
     <actions>
         <action id="Copy-Http" class="com.cts.process.CopyHttp" text="CTS" popup="true" description="执行http">
